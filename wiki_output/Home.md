@@ -1,8 +1,8 @@
 # Daily Experiment Wiki
 
-[Open GitHub Pages](https://github.com/${{ github.repository }})
+[Open GitHub Pages](https://example.github.io/demo)
 
-Updated: 2026-09-28 18:10 UTC
+Updated: 2026-09-28 18:15 UTC
 
 ## Summary
 
@@ -15,5 +15,5 @@ This is a placeholder source file. Replace it with the real data source you want
 
 ## Related pages
 
-- [Summary](/wiki/Summary)
+- [Summary](Summary)
 

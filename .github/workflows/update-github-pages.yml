@@ -26,18 +26,8 @@ jobs:
 
       - name: Generate site files
         env:
-          GITHUB_PAGES_URL: https://github.com/${{ github.repository }}
-        run: |
-          python scripts/update_site.py
-          python - <<'PY'
-          from pathlib import Path
-          root = Path('.')
-          pages_url = "${{ github.server_url }}/${{ github.repository }}"
-          wiki_home = (root / 'wiki' / 'Home.md').read_text(encoding='utf-8')
-          wiki_summary = (root / 'wiki' / 'Summary.md').read_text(encoding='utf-8')
-          (root / 'wiki' / 'Home.md').write_text(wiki_home.replace('{GITHUB_PAGES_URL}', pages_url), encoding='utf-8')
-          (root / 'wiki' / 'Summary.md').write_text(wiki_summary.replace('{GITHUB_PAGES_URL}', pages_url), encoding='utf-8')
-          PY
+          GITHUB_PAGES_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: python scripts/update_site.py
 
       - name: Update GitHub Wiki
         env:

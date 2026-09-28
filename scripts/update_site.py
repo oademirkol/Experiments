@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
@@ -56,7 +57,7 @@ def build_markdown(data: dict, timestamp: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build_wiki_home(data: dict, timestamp: str) -> str:
+def build_wiki_home(data: dict, timestamp: str, pages_url: str) -> str:
     title = data.get("title", "Daily Experiment")
     status = data.get("status", "ready")
     value = data.get("value", 0)
@@ -65,7 +66,7 @@ def build_wiki_home(data: dict, timestamp: str) -> str:
     lines = [
         f"# {title} Wiki",
         "",
-        "[Open GitHub Pages]({{GITHUB_PAGES_URL}})",
+        f"[Open GitHub Pages]({pages_url})",
         "",
         f"Updated: {timestamp}",
         "",
@@ -80,13 +81,13 @@ def build_wiki_home(data: dict, timestamp: str) -> str:
         "",
         "## Related pages",
         "",
-        "- [Summary](/wiki/Summary)",
+        "- [Summary](Summary)",
         "",
     ]
     return "\n".join(lines) + "\n"
 
 
-def build_wiki_summary(data: dict, timestamp: str) -> str:
+def build_wiki_summary(data: dict, timestamp: str, pages_url: str) -> str:
     title = data.get("title", "Daily Experiment")
     status = data.get("status", "ready")
     value = data.get("value", 0)
@@ -94,7 +95,7 @@ def build_wiki_summary(data: dict, timestamp: str) -> str:
     lines = [
         "# Summary",
         "",
-        "[Back to GitHub Pages]({{GITHUB_PAGES_URL}})",
+        f"[Back to GitHub Pages]({pages_url})",
         "",
         f"Updated: {timestamp}",
         "",
@@ -154,9 +155,9 @@ def main() -> None:
     markdown_text = build_markdown(data, timestamp)
     html_text = build_html(data, timestamp, markdown_text)
 
-    pages_url = "https://github.com/${{ github.repository }}"  # placeholder; replaced in workflow
-    wiki_home = build_wiki_home(data, timestamp).replace("{{GITHUB_PAGES_URL}}", pages_url)
-    wiki_summary = build_wiki_summary(data, timestamp).replace("{{GITHUB_PAGES_URL}}", pages_url)
+    pages_url = os.environ.get("GITHUB_PAGES_URL", "https://example.github.io/repo")
+    wiki_home = build_wiki_home(data, timestamp, pages_url)
+    wiki_summary = build_wiki_summary(data, timestamp, pages_url)
 
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
     (DOCS_DIR / "index.md").write_text(markdown_text, encoding="utf-8")
