@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA_FILE = ROOT / "data" / "source.json"
 DOCS_DIR = ROOT / "docs"
+WIKI_DIR = ROOT / "wiki"
 
 
 def load_source_data() -> dict:
@@ -50,6 +51,58 @@ def build_markdown(data: dict, timestamp: str) -> str:
         "## Notes",
         "",
         notes,
+        "",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def build_wiki_home(data: dict, timestamp: str) -> str:
+    title = data.get("title", "Daily Experiment")
+    status = data.get("status", "ready")
+    value = data.get("value", 0)
+    notes = data.get("notes", "")
+
+    lines = [
+        f"# {title} Wiki",
+        "",
+        "[Open GitHub Pages]({{GITHUB_PAGES_URL}})",
+        "",
+        f"Updated: {timestamp}",
+        "",
+        "## Summary",
+        "",
+        f"- Status: {status}",
+        f"- Value: {value}",
+        "",
+        "## Detailed notes",
+        "",
+        notes,
+        "",
+        "## Related pages",
+        "",
+        "- [Summary](/wiki/Summary)",
+        "",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def build_wiki_summary(data: dict, timestamp: str) -> str:
+    title = data.get("title", "Daily Experiment")
+    status = data.get("status", "ready")
+    value = data.get("value", 0)
+
+    lines = [
+        "# Summary",
+        "",
+        "[Back to GitHub Pages]({{GITHUB_PAGES_URL}})",
+        "",
+        f"Updated: {timestamp}",
+        "",
+        f"- Repository page: {title}",
+        f"- Current status: {status}",
+        f"- Current value: {value}",
+        "",
+        "This page is intended for deeper notes and operational details.",
         "",
     ]
     return "\n".join(lines) + "\n"
@@ -101,9 +154,17 @@ def main() -> None:
     markdown_text = build_markdown(data, timestamp)
     html_text = build_html(data, timestamp, markdown_text)
 
+    pages_url = "https://github.com/${{ github.repository }}"  # placeholder; replaced in workflow
+    wiki_home = build_wiki_home(data, timestamp).replace("{{GITHUB_PAGES_URL}}", pages_url)
+    wiki_summary = build_wiki_summary(data, timestamp).replace("{{GITHUB_PAGES_URL}}", pages_url)
+
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
     (DOCS_DIR / "index.md").write_text(markdown_text, encoding="utf-8")
     (DOCS_DIR / "index.html").write_text(html_text, encoding="utf-8")
+
+    WIKI_DIR.mkdir(parents=True, exist_ok=True)
+    (WIKI_DIR / "Home.md").write_text(wiki_home, encoding="utf-8")
+    (WIKI_DIR / "Summary.md").write_text(wiki_summary, encoding="utf-8")
 
     print(f"Generated docs for {timestamp}")
 
