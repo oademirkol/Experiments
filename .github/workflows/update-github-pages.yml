@@ -43,13 +43,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki
-          cd wiki
+          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki_repo
+          cd wiki_repo
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          cp ../wiki/Home.md Home.md
-          cp ../wiki/Summary.md Summary.md
+          cp ../wiki_output/Home.md Home.md
+          cp ../wiki_output/Summary.md Summary.md
 
           git add Home.md Summary.md
 

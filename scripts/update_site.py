@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA_FILE = ROOT / "data" / "source.json"
 DOCS_DIR = ROOT / "docs"
-WIKI_DIR = ROOT / "wiki"
+WIKI_DIR = ROOT / "wiki_output"
 
 
 def load_source_data() -> dict:
