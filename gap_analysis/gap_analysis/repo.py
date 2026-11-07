@@ -14,6 +14,8 @@ def checkout_repo(cfg: Dict[str, Any]) -> Path:
     Set GH_PAT=LOCAL and add 'local_path' to config to skip cloning.
     """
     gh_pat = os.environ.get("GH_PAT", "")
+    print(f"Using GH_PAT: {gh_pat}")
+    print(f"Config: {cfg}")
     gh_cfg = cfg["github"]
     owner = gh_cfg["owner"]
     repo = gh_cfg["repo"]
