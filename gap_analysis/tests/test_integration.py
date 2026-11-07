@@ -567,6 +567,54 @@ class TestSyntaxErrors(unittest.TestCase):
             self.assertEqual(len(data["syntax_errors"]), 1)
             self.assertIn("release", data["syntax_errors"][0]["reason"])
 
+    def test_syntax_errors_appear_in_md_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_dir = Path(tmp) / "TestFailureGapSpec"
+            spec_dir.mkdir()
+            (spec_dir / "FC-099.yaml").write_text(
+                textwrap.dedent("""\
+                function_cluster: FC-099
+                failing_test_gap_identification:
+                  components:
+                    - name: BrokenComp
+                      test_entries:
+                        - scenario_name: "BrokenTest"
+                          gap_specification: Missing release field.
+                          baselines:
+                            - "prefix_261021_125411"
+                """),
+                encoding="utf-8",
+            )
+            cfg_path = Path(tmp) / "config.yaml"
+            cfg_path.write_text(
+                textwrap.dedent(f"""\
+                github:
+                  owner: x
+                  repo: x
+                  branch: main
+                  gap_spec_dir: TestFailureGapSpec
+                local_path: {tmp}
+                output:
+                  base_dir: {tmp}/out
+                """),
+                encoding="utf-8",
+            )
+            tests = _tests_yaml(tmp, [{"scenario_name": "X"}])
+            env = os.environ.copy()
+            env["GH_PAT"] = "LOCAL"
+            subprocess.run(
+                [sys.executable, "-m", "gap_analysis",
+                 "--config", str(cfg_path), "--release", "v1.0", "--tests", str(tests)],
+                cwd=str(_PKG_DIR), capture_output=True, text=True, env=env,
+            )
+            out = Path(tmp) / "out"
+            md = (out / "report.md").read_text()
+            html = (out / "report.html").read_text()
+            self.assertIn("Syntax Errors", md)
+            self.assertIn("FC-099.yaml", md)
+            self.assertIn("Syntax Errors", html)
+            self.assertIn("FC-099.yaml", html)
+
     def test_syntax_errors_printed_to_stderr(self):
         with tempfile.TemporaryDirectory() as tmp:
             spec_dir = Path(tmp) / "TestFailureGapSpec"

@@ -1,6 +1,6 @@
 # Regression Analysis Tooling — Requirements and Design Document
 
-**Version:** 1.0  
+**Version:** 1.2  
 **Date:** 2026-11-07  
 **Purpose:** This document is the single source of truth required to recreate the `gap_analysis` tool from scratch on any machine, using only this document and no other context.
 
@@ -61,11 +61,29 @@ gap_analysis/
 └── tests/
     ├── __init__.py           (empty)
     ├── fixtures/
-    │   ├── FC-001.yaml       (synthetic gap-spec fixture)
+    │   ├── FC-001.yaml       (synthetic unit-test fixture)
     │   └── sample_tests.yaml (sample failing test list)
     ├── test_parser.py
     ├── test_matcher.py
-    └── test_reporter.py
+    ├── test_reporter.py
+    └── test_integration.py   (end-to-end CLI tests via subprocess)
+```
+
+Additional files outside `gap_analysis/`:
+
+```
+TestFailureGapSpec/            ← production gap-spec files read by the tool
+│   FC-001.yaml               (Auth Service — exact, wildcard, range, patch-only entries)
+│   FC-002.yaml               (Payment Service — multi-baseline, multi-patch, suffix wildcard)
+│   FC-003.yaml               (API Gateway — mixed releases, machine_type exact + wildcard)
+│   FC-004.yaml               (Notification Service — tags, mitigations, remarks)
+│   FC-005.yaml               (Data Pipeline — two identical DataPipeline_* entries → ambiguous)
+.vscode/
+│   launch.json               (5 VS Code run/debug configurations)
+Notes/
+│   RegressionAnalysis_Design.md   (this document)
+│   GapAnalysis_ClassDiagram.puml  (PlantUML class diagram)
+│   GapAnalysis_FlowDiagram.puml   (PlantUML activity flow diagram)
 ```
 
 ---
@@ -153,8 +171,8 @@ github:
   branch: main             # Branch to clone/reset to (string)
   gap_spec_dir: TestFailureGapSpec  # Directory within the repo root (string)
 
-# Optional: path to a local clone used when GH_PAT=LOCAL
-# local_path: C:/path/to/local/clone
+# Relative path used when GH_PAT=LOCAL; ".." resolves to repo root when cwd=gap_analysis/
+local_path: ..
 
 # Optional: where to cache the repo clone (default: ./_repo_cache/<repo>)
 # checkout_dir: ./_repo_cache/Experiments
@@ -458,24 +476,36 @@ Serialization: `dataclasses.asdict(obj)` applied to each dataclass instance.
 
 Structure:
 1. `# Regression Analysis Report`
-2. Header table (6 rows): Report Version, Generated at, Release, Reference Baselines, Patch IDs, Matched/Unmatched counts
-3. `## Matched Entries`
+2. Header table (6 rows): Report Version, Generated at, Release, Reference Baselines, Patch IDs
+3. Summary line: `**Matched:** N  **Unmatched:** N  **Syntax Errors:** N`
+4. `## Matched Entries`
    - Per `MatchResult`: `### Input: \`<scenario_name>\``
    - Ambiguity warning (blockquote) if `is_ambiguous`
    - Input table (4 rows)
    - Specificity Score line
    - Per entry: `#### FC-xxx / ComponentName` + entry table (13 rows)
-4. `## Unmatched Inputs`
+5. `## Unmatched Inputs`
    - Table with 4 columns: `Scenario Name | Configuration Name | Machine Type | Test Case Name`
+6. `## Syntax Errors in Gap Specifications` *(only present when errors exist)*
+   - Table with 3 columns: `Source File | Entry # | Reason`
 
 ### HTML report (`report.html`)
 
 Structure:
 - `<!DOCTYPE html>` + UTF-8 charset + inline CSS (no external dependencies)
 - `<h1>Regression Analysis Report</h1>`
-- Header `<table>` (7 rows including Matched/Unmatched counts)
+- Header `<table>` (8 rows: Report Version, Generated at, Release, Reference Baselines, Patch IDs, Matched, Unmatched, Syntax Errors)
 - `<h2>Matched Entries</h2>` section — `<h3>Input: <code>...</code></h3>` per result
 - `<h2>Unmatched Inputs</h2>` section — `<table class="unmatched">` with 4 `<th>` columns
+- `<h2>Syntax Errors in Gap Specifications</h2>` section — `<table class="syntax-errors">` with 3 `<th>` columns: Source File, Entry #, Reason
+
+CSS classes used for visual differentiation:
+
+| Class | Background | Used for |
+|---|---|---|
+| `.entry-table` | (indented) | Matched gap entry details |
+| `.unmatched` | `#fff8f0` (orange tint) | Unmatched inputs table |
+| `.syntax-errors` | `#fff0f0` (red tint) | Syntax error table |
 
 HTML escaping: all dynamic values escaped via `_h(s)`:
 ```python
@@ -489,23 +519,24 @@ No Jinja2. No external CSS files.
 
 ## 11. Offline / Test Mode
 
-Set `GH_PAT=LOCAL` and add `local_path` to `config.yaml`:
+Set `GH_PAT=LOCAL`. The `config.yaml` shipped in `gap_analysis/` already has `local_path: ..` set, which resolves to the repository root when the working directory is `gap_analysis/`. No manual edit is needed.
 
-```yaml
-local_path: C:/path/to/local/clone
-```
-
-- `repo.py` will skip all git operations.
-- Returns `Path(local_path).resolve()` directly.
+- `repo.py` skips all git operations and returns `Path(local_path).resolve()` directly.
 - Useful for CI fixture testing and development without a network connection.
 
-**Example invocation using the current workspace as the local clone:**
-```
-GH_PAT=LOCAL python -m gap_analysis \
-  --config config.yaml \
-  --release v1.0 \
-  --baseline prefix_261021_125411 \
+**Example invocation (no config edit required):**
+```powershell
+$env:GH_PAT = "LOCAL"
+python -m gap_analysis `
+  --config config.yaml `
+  --release v1.0 `
+  --baseline prefix_261021_125411 `
   --tests tests/fixtures/sample_tests.yaml
+```
+
+To point to a different directory (e.g. a separate clone), override `local_path` in `config.yaml` with an absolute path:
+```yaml
+local_path: C:/path/to/other/clone
 ```
 
 ---
@@ -518,16 +549,16 @@ GH_PAT=LOCAL python -m gap_analysis \
 | Config validation error | `config.py` | `ValueError` → CLI prints `ERROR loading config: ...` → `sys.exit(1)` |
 | Repo checkout failure | `repo.py` | Any exception → CLI prints `ERROR checking out repository: ...` → `sys.exit(1)` |
 | Failing tests file not found / invalid | `__main__.py` | Exception → `ERROR loading failing tests: ...` → `sys.exit(1)` |
-| Gap-spec file parse / validation error | `parser.py` | Collected as `GapSyntaxError`; parsing continues; errors printed to stderr |
+| Gap-spec file parse / validation error | `parser.py` | Collected as `GapSyntaxError`; parsing continues; errors printed to stderr **and included in all three report formats** |
 | No gap-spec files found | `parser.py` | Returns `([], [])` — tool runs normally, all inputs unmatched |
 
 ---
 
 ## 13. Test Fixture Specification
 
-### `tests/fixtures/FC-001.yaml`
+### Unit test fixture: `tests/fixtures/FC-001.yaml`
 
-Contains 6 test entries designed to exercise distinct scenarios:
+Contains 6 test entries designed to exercise distinct parser scenarios:
 
 | Entry # | `scenario_name` | Purpose |
 |---|---|---|
@@ -535,23 +566,56 @@ Contains 6 test entries designed to exercise distinct scenarios:
 | 2 | `Login*` | Wildcard scenario name; no optional fields; baseline only |
 | 3 | `PasswordReset` | Baseline range entry |
 | 4 | `OAuthFlow` | patch_ids only (no baselines) |
-| 5 | `PaymentCapture` | Different release (`v2.0`); should NOT match `v1.0` queries |
+| 5 | `PaymentCapture` | Different release (`v2.0`); valid syntax but excluded by release filter |
 | 6 | `BrokenEntry` | Missing `release`; triggers `GapSyntaxError` |
 
-**Expected parse result from `FC-001.yaml`:**
-- `len(entries) == 5` (entries 1–5 are all syntactically valid; entry 5 has `release: v2.0`)
-- `len(errors) == 1` (entry 6 `BrokenEntry` is missing `release`)
+**Expected parse result:** `len(entries) == 5`, `len(errors) == 1`.
 
-### `tests/fixtures/sample_tests.yaml`
+### Unit test sample inputs: `tests/fixtures/sample_tests.yaml`
 
 Three failing test records:
-1. `LoginExact` with all 4 fields — should exactly match entry 1
-2. `LoginWildcardMatch` with all Nones — should match entry 2 via `Login*`
-3. `NoMatchScenario` — should appear in unmatched
+1. `LoginExact` with all 4 fields — exactly matches entry 1
+2. `LoginWildcardMatch` with all Nones — matches entry 2 via `Login*`
+3. `NoMatchScenario` — appears in unmatched
+
+### Integration test fixtures: `TestFailureGapSpec/FC-001.yaml` – `FC-005.yaml`
+
+Five production-style gap-spec files used exclusively by `test_integration.py`. Each exercises distinct features:
+
+| File | Components | Key features exercised |
+|---|---|---|
+| `FC-001.yaml` | AuthService, PasswordService | Exact all-4-fields (score=12); `Login*` partial wildcard; `*Session*` double wildcard + baseline range; `LogoutExact` patch-only; `PasswordReset*` range |
+| `FC-002.yaml` | PaymentProcessor, InvoiceService | Multiple baselines; multiple patch IDs; `Refund_*` suffix wildcard; `machine_type: *` full wildcard; `*Invoice*` double wildcard with tags/remarks |
+| `FC-003.yaml` | GatewayCore, HealthMonitor | `API_RateLimit` exact score=12; `API_*` + exact machine_type (score=4); `*_Timeout` suffix wildcard + range; `Gateway_Health` **release v2.0** (release filter test) |
+| `FC-004.yaml` | SMSGateway, EmailService | All 4 fields + tags + mitigations + remarks; `SMS_*` multi-patch; `Email_*` range; `Push_Notification*` patch-only |
+| `FC-005.yaml` | DataIngestion, DataProcessing, DataExport | Two `DataPipeline_*` entries with identical score → `is_ambiguous=True`; multi-baseline export entry |
+
+### Integration test module: `tests/test_integration.py`
+
+- **36 tests** across 9 test classes.
+- Each test creates an isolated temp directory, writes a config pointing `local_path` to the workspace root with `GH_PAT=LOCAL`, runs the CLI via `subprocess.run`, and inspects stdout, exit code, and report files.
+- No shared state between tests; each test is fully self-contained.
+- Test classes: `TestExactMatch`, `TestWildcardMatch`, `TestReleaseFilter`, `TestBaselineFilter`, `TestPatchFilter`, `TestAmbiguousMatch`, `TestUnmatched`, `TestReportFiles`, `TestSyntaxErrors`, `TestCLIErrors`.
 
 ---
 
-## 14. Verification Checklist
+## 14. VS Code Launch Configurations (`.vscode/launch.json`)
+
+Five configurations available in the Run & Debug panel:
+
+| Name | Module | `cwd` | `GH_PAT` | Purpose |
+|---|---|---|---|---|
+| Unit Tests | `unittest discover tests/ -v` | `gap_analysis/` | not set | Run parser/matcher/reporter unit tests only |
+| Integration Tests | `unittest tests/test_integration.py -v` | `gap_analysis/` | `LOCAL` | Run CLI integration tests only |
+| All Tests (Unit + Integration) | `unittest discover tests/ -v` | `gap_analysis/` | `LOCAL` | Run all 96 tests |
+| Run Tool (sample data, LOCAL) | `gap_analysis` | `gap_analysis/` | `LOCAL` | Execute tool against local gap specs with sample data |
+| Debug Tool (step through) | `gap_analysis` | `gap_analysis/` | `LOCAL` | Same as above with `justMyCode: false` for stepping into library code |
+
+All configurations use `"type": "debugpy"` and `"console": "integratedTerminal"`.
+
+---
+
+## 15. Verification Checklist
 
 Run all commands from the `gap_analysis/` directory.
 
@@ -566,14 +630,24 @@ Expected: exits 0, installs `GitPython` and `PyYAML`.
 ```powershell
 python -m unittest discover tests/
 ```
-Expected: all tests pass (`OK`); no failures or errors.
+Expected: **59 tests**, all pass (`OK`).
 
-### Step 3 — Offline smoke test
-Add `local_path` pointing to the repo root in `config.yaml`:
-```yaml
-local_path: C:/path/to/Experiments
+### Step 3 — Run integration tests
+```powershell
+$env:GH_PAT = "LOCAL"
+python -m unittest tests/test_integration.py -v
 ```
-Then:
+Expected: **36 tests**, all pass (`OK`). Requires `TestFailureGapSpec/FC-001.yaml` – `FC-005.yaml` to exist.
+
+### Step 4 — Run full suite
+```powershell
+$env:GH_PAT = "LOCAL"
+python -m unittest discover tests/ -v
+```
+Expected: **96 tests total**, all pass.
+
+### Step 5 — Offline smoke test
+`local_path: ..` is already set in `config.yaml`. Run from `gap_analysis/`:
 ```powershell
 $env:GH_PAT = "LOCAL"
 python -m gap_analysis `
@@ -590,7 +664,7 @@ Reports written to: <absolute path to reports/>
   Unmatched: <n>
 ```
 
-### Step 4 — Verify report files
+### Step 6 — Verify report files
 ```powershell
 Test-Path reports/report.json  # → True
 Test-Path reports/report.md    # → True
@@ -599,26 +673,32 @@ Test-Path reports/.version     # → True
 Get-Content reports/.version   # → e.g. 2026.11.07.001
 ```
 
-### Step 5 — Verify JSON structure
+### Step 7 — Verify JSON structure
 ```powershell
 python -c "import json; d=json.load(open('reports/report.json')); print(list(d.keys()))"
 ```
 Expected: `['version', 'generated_at', 'run_context', 'matched', 'unmatched', 'syntax_errors']`
 
-### Step 6 — Verify Markdown unmatched table
+### Step 8 — Verify Markdown sections
 ```powershell
 Select-String -Path reports/report.md -Pattern "Scenario Name|Configuration Name|Machine Type|Test Case Name"
+Select-String -Path reports/report.md -Pattern "Syntax Errors"
 ```
-Expected: all four column headers found.
+Expected: all four unmatched-table column headers found; `Syntax Errors` section heading found.
 
-### Step 7 — Verify HTML escaping
+### Step 9 — Verify HTML escaping
 ```powershell
-Select-String -Path reports/report.html -Pattern "<with>"
+Select-String -Path reports/report.html -Pattern "<script>"
 ```
-Expected: no matches (special chars must be escaped as `&lt;with&gt;`).
+Expected: no matches (special chars escaped as `&lt;script&gt;`).
 
-### Step 8 — Version counter increments
-Run the tool twice and confirm `.version` counter increments:
+### Step 10 — Verify syntax errors appear in reports
+Run the tool pointing at a gap-spec directory containing a file with a missing `release` field. Confirm:
+- `report.json` has `syntax_errors` array with at least one entry.
+- `report.md` contains `## Syntax Errors in Gap Specifications` section.
+- `report.html` contains `<h2>Syntax Errors` and a table with class `syntax-errors`.
+
+### Step 11 — Version counter increments
 ```powershell
 python -m gap_analysis --config config.yaml --release v1.0 --tests tests/fixtures/sample_tests.yaml
 Get-Content reports/.version   # → ...001
@@ -628,7 +708,7 @@ Get-Content reports/.version   # → ...002
 
 ---
 
-## 15. Key Design Decisions
+## 16. Key Design Decisions
 
 | Decision | Choice | Reason |
 |---|---|---|
@@ -640,4 +720,5 @@ Get-Content reports/.version   # → ...002
 | Tie-breaking | Retain all; `is_ambiguous=True` | Avoids silent incorrect selection |
 | Version scheme | `YYYY.MM.DD.NNN` | Human-readable; unique per day; no external state except `.version` file |
 | External libraries | GitPython + PyYAML only | Minimal surface; easy to reproduce |
-| Imports from existing scripts | None | Tool is fully standalone |
+| Syntax errors in reports | All three formats | Broken entries are never silently discarded; they appear in JSON `syntax_errors` array, MD `## Syntax Errors` table, and HTML `<table class="syntax-errors">` so operators can audit gaps in the gap-spec files themselves |
+| Integration tests | `subprocess.run` + `GH_PAT=LOCAL` | Tests the real CLI contract end-to-end; each test is isolated via a temp directory config; no monkeypatching |

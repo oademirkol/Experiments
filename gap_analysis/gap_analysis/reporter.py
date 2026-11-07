@@ -49,8 +49,8 @@ def generate_reports(
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     _write_json(matched, unmatched, syntax_errors, ctx, generated_at, output_dir)
-    _write_md(matched, unmatched, ctx, generated_at, output_dir)
-    _write_html(matched, unmatched, ctx, generated_at, output_dir)
+    _write_md(matched, unmatched, syntax_errors, ctx, generated_at, output_dir)
+    _write_html(matched, unmatched, syntax_errors, ctx, generated_at, output_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -85,6 +85,7 @@ def _write_json(
 def _write_md(
     matched: List[MatchResult],
     unmatched: List[FailingTestInput],
+    syntax_errors: List[GapSyntaxError],
     ctx: RunContext,
     generated_at: str,
     output_dir: Path,
@@ -92,7 +93,11 @@ def _write_md(
     lines: List[str] = []
     lines.append("# Regression Analysis Report\n\n")
     lines.append(_md_header(ctx, generated_at))
-    lines.append(f"\n**Matched:** {len(matched)}  \n**Unmatched:** {len(unmatched)}\n")
+    lines.append(
+        f"\n**Matched:** {len(matched)}  \n"
+        f"**Unmatched:** {len(unmatched)}  \n"
+        f"**Syntax Errors:** {len(syntax_errors)}\n"
+    )
 
     if matched:
         lines.append("\n---\n\n## Matched Entries\n")
@@ -120,6 +125,17 @@ def _write_md(
                 f"| {inp.configuration_name or '—'} "
                 f"| {inp.machine_type or '—'} "
                 f"| {inp.test_case_name or '—'} |\n"
+            )
+
+    if syntax_errors:
+        lines.append("\n---\n\n## Syntax Errors in Gap Specifications\n\n")
+        lines.append("| Source File | Entry # | Reason |\n")
+        lines.append("|---|---|---|\n")
+        for err in syntax_errors:
+            lines.append(
+                f"| {err.source_file} "
+                f"| {err.entry_index} "
+                f"| {err.reason} |\n"
             )
 
     (output_dir / "report.md").write_text("".join(lines), encoding="utf-8")
@@ -182,6 +198,7 @@ def _tr(label: str, value: str) -> str:
 def _write_html(
     matched: List[MatchResult],
     unmatched: List[FailingTestInput],
+    syntax_errors: List[GapSyntaxError],
     ctx: RunContext,
     generated_at: str,
     output_dir: Path,
@@ -197,10 +214,12 @@ def _write_html(
         + _tr("Patch IDs", patches)
         + _tr("Matched", str(len(matched)))
         + _tr("Unmatched", str(len(unmatched)))
+        + _tr("Syntax Errors", str(len(syntax_errors)))
     )
 
     matched_html = _html_matched_section(matched)
     unmatched_html = _html_unmatched_section(unmatched)
+    syntax_errors_html = _html_syntax_errors_section(syntax_errors)
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -220,6 +239,7 @@ def _write_html(
     .warn {{ color: #a05000; border-left: 3px solid orange; padding: 4px 8px; }}
     .entry-table {{ margin-left: 1.5em; }}
     .unmatched td, .unmatched th {{ background: #fff8f0; }}
+    .syntax-errors td, .syntax-errors th {{ background: #fff0f0; }}
   </style>
 </head>
 <body>
@@ -231,6 +251,9 @@ def _write_html(
 
   <h2>Unmatched Inputs</h2>
   {unmatched_html or "<p>All inputs were matched.</p>"}
+
+  <h2>Syntax Errors in Gap Specifications</h2>
+  {syntax_errors_html or "<p>No syntax errors detected.</p>"}
 </body>
 </html>"""
 
@@ -300,6 +323,26 @@ def _html_unmatched_section(unmatched: List[FailingTestInput]) -> str:
         "<thead><tr>"
         "<th>Scenario Name</th><th>Configuration Name</th>"
         "<th>Machine Type</th><th>Test Case Name</th>"
+        "</tr></thead>"
+        f"<tbody>{rows}</tbody></table>"
+    )
+
+
+def _html_syntax_errors_section(syntax_errors: List[GapSyntaxError]) -> str:
+    if not syntax_errors:
+        return ""
+    rows = "".join(
+        f"<tr>"
+        f"<td>{_h(err.source_file)}</td>"
+        f"<td>{err.entry_index}</td>"
+        f"<td>{_h(err.reason)}</td>"
+        f"</tr>\n"
+        for err in syntax_errors
+    )
+    return (
+        '<table class="syntax-errors">'
+        "<thead><tr>"
+        "<th>Source File</th><th>Entry #</th><th>Reason</th>"
         "</tr></thead>"
         f"<tbody>{rows}</tbody></table>"
     )
