@@ -1,0 +1,14 @@
+- scenario_name: LoginExact
+  configuration_name: default
+  machine_type: x86_64
+  test_case_name: test_login_success
+
+- scenario_name: LoginWildcardMatch
+  configuration_name: null
+  machine_type: null
+  test_case_name: null
+
+- scenario_name: NoMatchScenario
+  configuration_name: null
+  machine_type: null
+  test_case_name: null

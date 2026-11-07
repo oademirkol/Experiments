@@ -1,0 +1,135 @@
+@startuml GapAnalysis_ClassDiagram
+
+skinparam classAttributeIconSize 0
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam packageStyle rectangle
+skinparam roundcorner 6
+
+' ─────────────────────────────────────────────
+' Data models
+' ─────────────────────────────────────────────
+package "gap_analysis.models" {
+
+  class FailingTestInput << (D,#aaddff) dataclass >> {
+    + scenario_name       : str
+    + configuration_name  : str  [optional]
+    + machine_type        : str  [optional]
+    + test_case_name      : str  [optional]
+  }
+
+  class GapEntry << (D,#aaddff) dataclass >> {
+    + function_cluster    : str
+    + component           : str
+    + scenario_name       : str
+    + configuration_name  : str  [optional, wildcard]
+    + machine_type        : str  [optional, wildcard]
+    + test_case_name      : str  [optional, wildcard]
+    + gap_specification   : str
+    + mitigations         : str  [optional]
+    + tags                : List[str]
+    + baselines           : List[str]
+    + release             : str
+    + patch_ids           : List[str]
+    + remarks             : str  [optional]
+    + output_dir          : str  [optional, resolved]
+    + source_file         : str
+  }
+
+  class MatchResult << (D,#aaddff) dataclass >> {
+    + input               : FailingTestInput
+    + matched_entries     : List[GapEntry]
+    + specificity_score   : int
+    + is_ambiguous        : bool
+  }
+
+  class RunContext << (D,#aaddff) dataclass >> {
+    + release             : str
+    + reference_baselines : List[str]
+    + patch_ids           : List[str]
+    + version             : str
+  }
+
+  class GapSyntaxError << (D,#aaddff) dataclass >> {
+    + source_file         : str
+    + entry_index         : int
+    + reason              : str
+  }
+
+  MatchResult "1" *-right- "1"    FailingTestInput : input
+  MatchResult "1" *-down-  "0..*" GapEntry         : matched_entries
+}
+
+' ─────────────────────────────────────────────
+' Modules (shown as classes exposing their public API)
+' ─────────────────────────────────────────────
+package "gap_analysis (modules)" {
+
+  class "config.py" as Config << (M,#ffffaa) module >> {
+    + load_config(config_path: Path) : Dict
+  }
+
+  class "repo.py" as Repo << (M,#ffffaa) module >> {
+    + checkout_repo(cfg: Dict) : Path
+    .. env ..
+    GH_PAT  : str  (env var)
+    .. offline ..
+    GH_PAT=LOCAL + local_path → skip clone
+  }
+
+  class "parser.py" as Parser << (M,#ffffaa) module >> {
+    + discover_files(gap_spec_dir: Path) : List[Path]
+    + parse_file(file_path: Path) : Tuple[List[GapEntry], List[GapSyntaxError]]
+    + parse_all(gap_spec_dir: Path) : Tuple[List[GapEntry], List[GapSyntaxError]]
+    .. file pattern ..
+    FC-\d{3}(.yaml|.yml|.json)
+  }
+
+  class "matcher.py" as Matcher << (M,#ffffaa) module >> {
+    + match(failing_tests, entries, ctx) : Tuple[List[MatchResult], List[FailingTestInput]]
+    -- scoring --
+    + _field_score(pattern, value) : int | None
+    + _score_entry(entry, input)   : int | None
+    -- filters --
+    + _release_filter(entry, ctx)  : bool
+    + _baseline_filter(entry, ctx) : bool
+    + _patch_filter(entry, ctx)    : bool
+  }
+
+  class "reporter.py" as Reporter << (M,#ffffaa) module >> {
+    + generate_reports(matched, unmatched, syntax_errors, ctx, output_dir) : None
+    -- internals --
+    - _next_version(output_dir)    : str
+    - _write_json(...)             : None
+    - _write_md(...)               : None
+    - _write_html(...)             : None
+  }
+
+  class "__main__.py" as Main << (M,#ffffaa) module >> {
+    + main() : None
+    .. CLI args ..
+    --config, --release, --baseline
+    --patch, --tests, --output
+  }
+}
+
+' ─────────────────────────────────────────────
+' Dependencies between modules
+' ─────────────────────────────────────────────
+Main  --> Config   : load_config()
+Main  --> Repo     : checkout_repo()
+Main  --> Parser   : parse_all()
+Main  --> Matcher  : match()
+Main  --> Reporter : generate_reports()
+
+Parser   ..> GapEntry      : <<creates>>
+Parser   ..> GapSyntaxError: <<creates>>
+Matcher  ..> MatchResult   : <<creates>>
+Matcher  ..> FailingTestInput : <<returns unmatched>>
+Matcher  ..> RunContext    : <<reads>>
+Reporter ..> MatchResult   : <<reads>>
+Reporter ..> RunContext    : <<reads>>
+Reporter ..> GapSyntaxError: <<reads>>
+
+@enduml

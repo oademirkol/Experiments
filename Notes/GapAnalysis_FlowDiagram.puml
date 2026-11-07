@@ -1,0 +1,139 @@
+@startuml GapAnalysis_FlowDiagram
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam ArrowColor #555555
+skinparam ActivityBorderColor #555555
+skinparam ActivityBackgroundColor #f8f8f8
+skinparam ActivityDiamondBackgroundColor #fffbe6
+skinparam NoteBackgroundColor #eef8ff
+skinparam NoteBorderColor #aabbcc
+skinparam roundcorner 8
+
+title Regression Analysis Tool — Execution Flow
+
+start
+
+:Parse CLI arguments\n**--config** · **--release** · **--baseline** (repeatable)\n**--patch** (repeatable) · **--tests** · **--output**;
+
+' ── Config ──────────────────────────────────────────────────────────
+partition "config.py" {
+  :load_config(config_path);
+}
+if (Valid config?) then (no)
+  #ffcccc:Print ERROR to stderr;
+  :exit(1);
+  stop
+else (yes)
+endif
+
+' ── Repo ────────────────────────────────────────────────────────────
+partition "repo.py" {
+  if (GH_PAT == "LOCAL"?) then (yes)
+    :Resolve **local_path** from config\n(offline / CI fixture mode);
+  else (no)
+    if (GH_PAT env var set?) then (no)
+      #ffcccc:Print ERROR to stderr;
+      :exit(1);
+      stop
+    else (yes)
+    endif
+    if (checkout_dir exists\nand contains .git?) then (yes)
+      :git fetch origin\ngit reset --hard origin/<branch>;
+    else (no)
+      :git clone --depth 1\n--branch <branch>;
+    endif
+  endif
+  :Return **repo_root** (absolute Path);
+}
+
+' ── Parser ──────────────────────────────────────────────────────────
+partition "parser.py" {
+  :Resolve gap_spec_dir\n= repo_root / cfg.github.gap_spec_dir;
+  :discover_files(gap_spec_dir)\n→ all FC-\\d{3}.(yaml|yml|json) files (recursive);
+  :parse_all(gap_spec_dir)\n→ iterate each file;
+
+  note right
+    Validation errors collected as
+    **GapSyntaxError** objects.
+    Parsing continues — never aborts.
+    Errors printed to stderr.
+  end note
+
+  :Return **(entries, syntax_errors)**;
+}
+
+' ── Load failing tests ───────────────────────────────────────────────
+:Load failing test list\nfrom **--tests** (YAML/JSON file or inline JSON string)\n→ List[FailingTestInput];
+
+if (Load succeeded?) then (no)
+  #ffcccc:Print ERROR to stderr;
+  :exit(1);
+  stop
+else (yes)
+endif
+
+:Build **RunContext**\n(release, reference_baselines, patch_ids, version="");
+
+' ── Matcher ─────────────────────────────────────────────────────────
+partition "matcher.py — match(failing_tests, entries, ctx)" {
+  while (For each FailingTestInput?) is (more inputs)
+    :Iterate all GapEntry objects;
+    while (For each GapEntry?) is (more entries)
+      if (entry.release == ctx.release?) then (no)
+        :Skip entry;
+      elseif (baseline filter passes?) then (no)
+        :Skip entry;
+      elseif (patch filter passes?) then (no)
+        :Skip entry;
+      else (all pass)
+        :Score each field\nexact=**3** · partial wildcard=**1**\nfull wildcard=**0** · absent=**0**;
+        if (Any field disqualified\n(pattern present, no match)?) then (yes)
+          :Discard entry;
+        else (no)
+          :Add (total_score, entry)\nto candidate list;
+        endif
+      endif
+    endwhile (done)
+    if (No candidates?) then (yes)
+      :Append input to\n**UNMATCHED** list;
+    else (no)
+      :Select entries with\n**max(score)**;
+      if (Multiple top-scorers?) then (yes)
+        :MatchResult\n(is_ambiguous = **True**)\nall top entries included;
+      else (no)
+        :MatchResult\n(is_ambiguous = **False**)\nsingle winning entry;
+      endif
+      :Append MatchResult to\n**MATCHED** list;
+    endif
+  endwhile (done)
+}
+
+' ── Output dir resolution ────────────────────────────────────────────
+:Resolve output directory\n1. **--output** CLI arg\n2. first **entry.output_dir** from matched results\n3. **config.output.base_dir**\n→ always Path.resolve() to absolute;
+
+' ── Reporter ────────────────────────────────────────────────────────
+partition "reporter.py — generate_reports(...)" {
+  :output_dir.mkdir(parents=True, exist_ok=True);
+  :Read **{output_dir}/.version**\nIncrement NNN if same UTC date\nelse restart at 001\n→ set ctx.version = YYYY.MM.DD.NNN;
+
+  fork
+    :Write **report.json**\ndataclasses.asdict serialization\nkeys: version · generated_at ·\nrun_context · matched ·\nunmatched · syntax_errors;
+  fork again
+    :Write **report.md**\nHeader table + matched sections\n+ unmatched table\n(4 mandatory columns);
+  fork again
+    :Write **report.html**\nInline CSS · f-string template\nHTML-escaped values\nheader + matched + unmatched;
+  end fork
+
+  :Write updated counter to\n**{output_dir}/.version**;
+}
+
+' ── Summary ─────────────────────────────────────────────────────────
+#ccffcc:Print summary to stdout\nReports written to: <path>\nMatched: N  Unmatched: M;
+
+:exit(0);
+
+stop
+
+@enduml

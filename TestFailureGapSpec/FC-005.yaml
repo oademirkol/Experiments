@@ -1,0 +1,54 @@
+function_cluster: FC-005
+failing_test_gap_identification:
+  components:
+
+    # DataIngestion and DataProcessing both carry DataPipeline_* with the same
+    # specificity score (1). An input with only scenario_name=DataPipeline_<x>
+    # will match both, producing is_ambiguous=True in the MatchResult.
+    - name: DataIngestion
+      test_entries:
+
+        - scenario_name: "DataPipeline_*"
+          gap_specification: |
+            Data ingestion pipeline scenarios are missing coverage.
+            Schema validation at the ingestion boundary is not tested.
+            Malformed record handling has no automated assertions.
+          tags: [data, pipeline, ingestion]
+          release: "v1.0"
+          baselines:
+            - "prefix_261021_125411"
+
+    - name: DataProcessing
+      test_entries:
+
+        - scenario_name: "DataPipeline_*"
+          gap_specification: |
+            Data processing pipeline scenarios are missing coverage.
+            Transformation correctness and output schema validation are absent.
+            Dead-letter queue handling has no test coverage.
+          tags: [data, pipeline, processing]
+          release: "v1.0"
+          baselines:
+            - "prefix_261021_125411"
+
+    - name: DataExport
+      test_entries:
+
+        # exact scenario + exact config; multiple baselines
+        - scenario_name: "DataExport_CSV"
+          configuration_name: "prod"
+          gap_specification: |
+            CSV export correctness is not verified beyond basic smoke tests.
+            Large dataset export memory handling is completely untested.
+          release: "v1.0"
+          baselines:
+            - "prefix_261021_125411"
+            - "prefix_261027_115411"
+
+        # partial wildcard; patch-only; tags
+        - scenario_name: "DataExport_*"
+          gap_specification: |
+            All DataExport variants lack coverage for partial-failure recovery.
+          tags: [data, export, recovery]
+          release: "v1.0"
+          patch_ids: ["PATCH-001"]

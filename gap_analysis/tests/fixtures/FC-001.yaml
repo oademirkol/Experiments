@@ -1,0 +1,67 @@
+function_cluster: FC-001
+failing_test_gap_identification:
+  components:
+
+    - name: AuthService
+      test_entries:
+
+        # Entry 1: exact match on all four fields
+        - scenario_name: "LoginExact"
+          configuration_name: "default"
+          machine_type: "x86_64"
+          test_case_name: "test_login_success"
+          gap_specification: |
+            Login success path not exercised in baseline suite.
+          mitigations: |
+            Covered by integration tests in CI pipeline.
+          tags: [auth, login, smoke]
+          baselines:
+            - "prefix_261021_125411"
+          release: "v1.0"
+          patch_ids: ["PATCH-001"]
+          remarks: |
+            Tracked in JIRA AUTH-42.
+
+        # Entry 2: wildcard scenario name
+        - scenario_name: "Login*"
+          configuration_name: null
+          machine_type: null
+          test_case_name: null
+          gap_specification: |
+            All login variants lack negative path coverage.
+          release: "v1.0"
+          baselines:
+            - "prefix_261021_125411"
+
+        # Entry 3: baseline range
+        - scenario_name: "PasswordReset"
+          gap_specification: |
+            Password reset flow not covered between baseline range.
+          release: "v1.0"
+          baselines:
+            - "range:prefix_261021_125411 - prefix_261101_101145"
+
+        # Entry 4: patch_ids only (no baselines)
+        - scenario_name: "OAuthFlow"
+          gap_specification: |
+            OAuth PKCE flow missing from patch PATCH-002 scope.
+          release: "v1.0"
+          patch_ids: ["PATCH-002"]
+
+    - name: PaymentService
+      test_entries:
+
+        # Entry 5: different release — should NOT match v1.0 queries
+        - scenario_name: "PaymentCapture"
+          gap_specification: |
+            Payment capture not exercised in v2.0.
+          release: "v2.0"
+          baselines:
+            - "prefix_261101_101145"
+
+        # Entry 6: incomplete — missing 'release' (triggers GapSyntaxError)
+        - scenario_name: "BrokenEntry"
+          gap_specification: |
+            This entry is intentionally incomplete for validation testing.
+          baselines:
+            - "prefix_261021_125411"

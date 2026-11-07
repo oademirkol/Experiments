@@ -1,0 +1,53 @@
+function_cluster: FC-002
+failing_test_gap_identification:
+  components:
+
+    - name: PaymentProcessor
+      test_entries:
+
+        # exact scenario + exact config; multiple baselines
+        - scenario_name: "Payment_Capture"
+          configuration_name: "prod"
+          gap_specification: |
+            Payment capture not tested against both listed baselines.
+            3DS verification flow has no automated coverage.
+          tags: [payment, capture, 3ds]
+          baselines:
+            - "prefix_261021_125411"
+            - "prefix_261027_115411"
+          release: "v1.0"
+
+        # partial wildcard scenario; multiple patch IDs
+        - scenario_name: "Payment*"
+          gap_specification: |
+            All Payment* scenarios are missing retry-on-failure coverage.
+            Idempotency key handling is not asserted in any test.
+          release: "v1.0"
+          patch_ids: ["PATCH-001", "PATCH-002"]
+
+        # suffix partial wildcard; full machine_type wildcard
+        - scenario_name: "Refund_*"
+          machine_type: "*"
+          gap_specification: |
+            Refund scenarios have no machine-type-specific coverage.
+            Cross-architecture test gaps exist for all Refund flows.
+          release: "v1.0"
+          baselines:
+            - "prefix_261027_115411"
+
+    - name: InvoiceService
+      test_entries:
+
+        # double wildcard; tags + mitigations + remarks; patch-only
+        - scenario_name: "*Invoice*"
+          gap_specification: |
+            Invoice generation and dispatch flows are fully uncovered.
+            PDF rendering and locale-specific formatting not tested.
+          mitigations: |
+            Manual exploratory testing conducted during sprint 44.
+          tags: [invoice, billing, pdf]
+          remarks: |
+            Stakeholder sign-off obtained in Q4 planning session.
+            Deferred to v1.1 automated suite.
+          release: "v1.0"
+          patch_ids: ["PATCH-001"]
