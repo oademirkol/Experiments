@@ -236,7 +236,14 @@ jobs:
           for patch in [v.strip() for v in os.environ.get('PATCHES', '').split(',') if v.strip()]:
               cmd.extend(['--patch', patch])
 
-          completed = subprocess.run(cmd, cwd=tool_dir, env=os.environ.copy(), check=False)
+            # Run from the Python project root so module resolution targets
+            # gap_analysis/gap_analysis/__main__.py (not the parent wrapper dir).
+            completed = subprocess.run(
+              cmd,
+              cwd=tool_dir / 'gap_analysis',
+              env=os.environ.copy(),
+              check=False,
+            )
           raise SystemExit(completed.returncode)
           PY
 
