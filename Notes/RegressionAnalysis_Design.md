@@ -615,7 +615,61 @@ All configurations use `"type": "debugpy"` and `"console": "integratedTerminal"`
 
 ---
 
-## 15. Verification Checklist
+## 15. GitHub Actions Reusable Workflow
+
+The `gap_analysis` runner can be used from any repository via a reusable GitHub workflow. This is the recommended way to trigger the tool from another repo without copying the CLI code. The reusable workflow lives in this repository at `.github/workflows/gap-analysis-reusable.yml`.
+
+### Contract
+
+The workflow accepts the following inputs:
+
+| Input | Required | Default | Purpose |
+|---|---|---|---|
+| `target_repo` | No | current repo | The repository to analyze, in `owner/repo` form |
+| `target_ref` | No | `main` | Branch or tag to inspect |
+| `gap_spec_dir` | Yes | — | Directory under the target repo root containing gap-spec YAML files |
+| `release` | Yes | — | Release label used for matching |
+| `tests_file` | Yes | — | Relative path to the failing-tests YAML/JSON file |
+| `baseline` | No | `""` | Comma-separated list of reference baselines |
+| `patch` | No | `""` | Comma-separated list of patch IDs |
+| `output_dir` | No | `reports` | Output directory inside the target repo |
+| `tool_ref` | No | `main` | Branch/tag/SHA of the tool repo to check out |
+| `clone_mode` | No | `local` | `local` uses a checked-out repo; `remote` enables GitHub clone mode |
+
+The workflow also accepts an optional `GH_PAT` secret for remote clone mode. Local mode works without a secret and is the default because it is deterministic and does not depend on repository network access.
+
+### Example caller workflow
+
+```yaml
+jobs:
+  regression-analysis:
+    uses: oademirkol/Experiments/.github/workflows/gap-analysis-reusable.yml@main
+    with:
+      target_repo: my-org/target-repo
+      target_ref: main
+      gap_spec_dir: TestFailureGapSpec
+      release: v1.0
+      tests_file: artifacts/failing-tests.yaml
+      baseline: prefix_261021_125411
+      patch: PATCH-001
+      output_dir: reports
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}
+```
+
+### Runtime behavior
+
+1. The workflow checks out the target repository into a local directory.
+2. It checks out the tool repository and installs the Python dependency set.
+3. It creates a temporary `config.yaml` that points the CLI at the checked-out target repo using `local_path`.
+4. It runs `python -m gap_analysis` with the provided release, baseline, patch, and failing-tests inputs.
+5. It uploads the generated `report.json`, `report.md`, `report.html`, and `.version` files as workflow artifacts.
+
+This makes the gap-analysis script reusable across repos without copying any implementation code into each consumer repository.
+
+---
+
+## 16. Verification Checklist
 
 Run all commands from the `gap_analysis/` directory.
 
@@ -708,7 +762,7 @@ Get-Content reports/.version   # → ...002
 
 ---
 
-## 16. Key Design Decisions
+## 17. Key Design Decisions
 
 | Decision | Choice | Reason |
 |---|---|---|

@@ -1,6 +1,6 @@
 {
-  "version": "2026.11.07.005",
-  "generated_at": "2026-11-07 06:59:57 UTC",
+  "version": "2026.11.07.006",
+  "generated_at": "2026-11-07 07:05:20 UTC",
   "run_context": {
     "release": "v1.0",
     "reference_baselines": [
@@ -9,7 +9,7 @@
     "patch_ids": [
       "PATCH-001"
     ],
-    "version": "2026.11.07.005"
+    "version": "2026.11.07.006"
   },
   "matched": [
     {
@@ -92,24 +92,32 @@
         {
           "function_cluster": "FC-001",
           "component": "AuthService",
-          "scenario_name": "Login*",
-          "configuration_name": null,
-          "machine_type": null,
-          "test_case_name": null,
-          "gap_specification": "All Login variant scenarios lack negative path coverage.\nEdge cases such as account lockout and concurrent sessions are missing.",
-          "mitigations": null,
-          "tags": [],
+          "scenario_name": "LoginExact",
+          "configuration_name": "default",
+          "machine_type": "x8*",
+          "test_case_name": "test_login_success",
+          "gap_specification": "Login success path is not exercised in the current baseline suite.\nMissing assertion on JWT token expiry handling.",
+          "mitigations": "Covered by AuthService integration tests in CI pipeline.\nManual verification performed on v1.0 RC2.",
+          "tags": [
+            "auth",
+            "login",
+            "smoke",
+            "jwt"
+          ],
           "baselines": [
             "prefix_261021_125411"
           ],
           "release": "v1.0",
-          "patch_ids": [],
-          "remarks": null,
+          "patch_ids": [
+            "PATCH-001",
+            "PATCH-002"
+          ],
+          "remarks": "Tracked in JIRA 12345.",
           "output_dir": null,
           "source_file": "C:\\Users\\oadem\\Documents\\projects\\experiment\\Experiments\\gap_analysis\\_repo_cache\\Experiments\\TestFailureGapSpec\\FC-001.yaml"
         }
       ],
-      "specificity_score": 1,
+      "specificity_score": 10,
       "is_ambiguous": false
     }
   ],

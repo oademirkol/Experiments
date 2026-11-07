@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| **Report Version** | 2026.11.07.005 |
-| **Generated at** | 2026-11-07 06:59:57 UTC |
+| **Report Version** | 2026.11.07.006 |
+| **Generated at** | 2026-11-07 07:05:20 UTC |
 | **Release** | v1.0 |
 | **Reference Baselines** | prefix_261021_125411 |
 | **Patch IDs** | PATCH-001 |
@@ -81,23 +81,23 @@
 | Machine Type | x86_77 |
 | Test Case Name | test_login_success |
 
-**Specificity Score:** 1
+**Specificity Score:** 10
 
 #### FC-001 / AuthService
 
 | Field | Value |
 |---|---|
-| Scenario Name (pattern) | Login* |
-| Configuration Name (pattern) | — |
-| Machine Type (pattern) | — |
-| Test Case Name (pattern) | — |
+| Scenario Name (pattern) | LoginExact |
+| Configuration Name (pattern) | default |
+| Machine Type (pattern) | x8* |
+| Test Case Name (pattern) | test_login_success |
 | Release | v1.0 |
 | Baselines | prefix_261021_125411 |
-| Patch IDs | — |
-| Tags | — |
-| Gap Specification | All Login variant scenarios lack negative path coverage. Edge cases such as account lockout and concurrent sessions are missing. |
-| Mitigations | — |
-| Remarks | — |
+| Patch IDs | PATCH-001, PATCH-002 |
+| Tags | auth, login, smoke, jwt |
+| Gap Specification | Login success path is not exercised in the current baseline suite. Missing assertion on JWT token expiry handling. |
+| Mitigations | Covered by AuthService integration tests in CI pipeline. Manual verification performed on v1.0 RC2. |
+| Remarks | Tracked in JIRA 12345. |
 | Source File | C:\Users\oadem\Documents\projects\experiment\Experiments\gap_analysis\_repo_cache\Experiments\TestFailureGapSpec\FC-001.yaml |
 
 ---

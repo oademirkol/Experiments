@@ -1,0 +1,303 @@
+name: Gap Analysis Reusable Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: Repository to analyze in owner/repo format. Defaults to the current repository.
+        required: false
+        type: string
+        default: ""
+      target_ref:
+        description: Branch, tag, or SHA to analyze.
+        required: false
+        type: string
+        default: main
+      gap_spec_dir:
+        description: Directory containing the gap spec YAML files under the target repo root.
+        required: true
+        type: string
+        default: TestFailureGapSpec
+      release:
+        description: Release label used by the gap-spec matching logic.
+        required: true
+        type: string
+      tests_file:
+        description: Relative path from the repo root to the YAML/JSON failing-tests file.
+        required: true
+        type: string
+      baseline:
+        description: "Comma-separated list of baselines. Example: prefix_261021_125411,prefix_261101_101145"
+        required: false
+        type: string
+        default: ""
+      patch:
+        description: "Comma-separated list of patch IDs. Example: PATCH-001,PATCH-002"
+        required: false
+        type: string
+        default: ""
+      output_dir:
+        description: Directory where the report artifacts will be written inside the target repo.
+        required: false
+        type: string
+        default: reports
+      tool_ref:
+        description: Branch/tag/SHA to use for the gap-analysis tooling checkout.
+        required: false
+        type: string
+        default: main
+      clone_mode:
+        description: local uses a checked-out repo; remote clones from GitHub using GH_PAT.
+        required: false
+        type: choice
+        options: [local, remote]
+        default: local
+      pr_number:
+        description: PR number to comment on. Leave blank to skip posting.
+        required: false
+        type: string
+        default: ""
+
+  workflow_call:
+    inputs:
+      target_repo:
+        description: Repository to analyze in owner/repo format. Defaults to the current repository.
+        required: false
+        type: string
+        default: ""
+      target_ref:
+        description: Branch, tag, or SHA to analyze.
+        required: false
+        type: string
+        default: main
+      gap_spec_dir:
+        description: Directory containing the gap spec YAML files under the target repo root.
+        required: true
+        type: string
+      release:
+        description: Release label used by the gap-spec matching logic.
+        required: true
+        type: string
+      tests_file:
+        description: Relative path from the repo root to the YAML/JSON failing-tests file.
+        required: true
+        type: string
+      baseline:
+        description: Comma-separated list of baselines.
+        required: false
+        type: string
+        default: ""
+      patch:
+        description: Comma-separated list of patch IDs.
+        required: false
+        type: string
+        default: ""
+      output_dir:
+        description: Directory where the report artifacts will be written inside the target repo.
+        required: false
+        type: string
+        default: reports
+      tool_ref:
+        description: Branch/tag/SHA to use for the gap-analysis tooling checkout.
+        required: false
+        type: string
+        default: main
+      clone_mode:
+        description: local uses a checked-out repo; remote clones from GitHub using GH_PAT.
+        required: false
+        type: string
+        default: local
+      pr_number:
+        description: PR number to comment on. Inferred automatically for pull_request triggers.
+        required: false
+        type: string
+        default: ""
+    secrets:
+      GH_PAT:
+        description: Optional GitHub PAT used for remote mode. Not needed when clone_mode=local.
+        required: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Resolve target repository
+        id: target
+        shell: bash
+        env:
+          TARGET_REPO_INPUT: ${{ inputs.target_repo }}
+          CURRENT_REPO: ${{ github.repository }}
+        run: |
+          if [ -n "$TARGET_REPO_INPUT" ]; then
+            echo "repo=$TARGET_REPO_INPUT" >> "$GITHUB_OUTPUT"
+          else
+            echo "repo=$CURRENT_REPO" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.target.outputs.repo }}
+          ref: ${{ inputs.target_ref }}
+          path: target-repo
+          fetch-depth: 1
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout gap analysis tool
+        uses: actions/checkout@v4
+        with:
+          repository: oademirkol/Experiments
+          ref: ${{ inputs.tool_ref }}
+          path: gap-analysis-tool
+          sparse-checkout: |
+            gap_analysis
+            requirements.txt
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r gap-analysis-tool/gap_analysis/requirements.txt
+
+      - name: Prepare config and run analysis
+        shell: bash
+        env:
+          TARGET_REPO: ${{ steps.target.outputs.repo }}
+          TARGET_REF: ${{ inputs.target_ref }}
+          GAP_SPEC_DIR: ${{ inputs.gap_spec_dir }}
+          RELEASE: ${{ inputs.release }}
+          TESTS_FILE: ${{ inputs.tests_file }}
+          BASELINES: ${{ inputs.baseline }}
+          PATCHES: ${{ inputs.patch }}
+          OUTPUT_DIR: ${{ inputs.output_dir }}
+          CLONE_MODE: ${{ inputs.clone_mode }}
+          GH_PAT: ${{ secrets.GH_PAT || 'LOCAL' }}
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          root = Path.cwd()
+          tool_dir = root / 'gap-analysis-tool'
+          target_dir = root / 'target-repo'
+          cfg_path = tool_dir / 'gap_analysis' / 'config.yaml'
+
+          cfg = {
+              'github': {
+                  'owner': os.environ['TARGET_REPO'].split('/')[0],
+                  'repo': os.environ['TARGET_REPO'].split('/', 1)[1],
+                  'branch': os.environ['TARGET_REF'],
+                  'gap_spec_dir': os.environ['GAP_SPEC_DIR'],
+              },
+              'local_path': str(target_dir.resolve()),
+              'output': {'base_dir': os.environ['OUTPUT_DIR']},
+          }
+
+          if os.environ.get('CLONE_MODE', 'local') == 'remote':
+              cfg['local_path'] = str(target_dir.resolve())
+              # Remote mode is still supported by the tool's standard checkout logic.
+              # For GitHub Actions we prefer local checkout for determinism and reproducibility.
+
+          with open(cfg_path, 'w', encoding='utf-8') as fh:
+              import yaml
+              yaml.safe_dump(cfg, fh, sort_keys=False)
+
+          tests_path = (target_dir / os.environ['TESTS_FILE']).resolve()
+          if not tests_path.exists():
+              raise FileNotFoundError(f"Failing tests file not found: {tests_path}")
+
+          cmd = [
+              'python',
+              '-m',
+              'gap_analysis',
+              '--config',
+              str((tool_dir / 'gap_analysis' / 'config.yaml').resolve()),
+              '--release',
+              os.environ['RELEASE'],
+              '--tests',
+              str(tests_path),
+              '--output',
+              str((target_dir / os.environ['OUTPUT_DIR']).resolve()),
+          ]
+
+          for baseline in [v.strip() for v in os.environ.get('BASELINES', '').split(',') if v.strip()]:
+              cmd.extend(['--baseline', baseline])
+          for patch in [v.strip() for v in os.environ.get('PATCHES', '').split(',') if v.strip()]:
+              cmd.extend(['--patch', patch])
+
+          completed = subprocess.run(cmd, cwd=tool_dir, env=os.environ.copy(), check=False)
+          raise SystemExit(completed.returncode)
+          PY
+
+      - name: Upload report artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gap-analysis-report
+          path: |
+            target-repo/${{ inputs.output_dir }}/report.json
+            target-repo/${{ inputs.output_dir }}/report.md
+            target-repo/${{ inputs.output_dir }}/report.html
+            target-repo/${{ inputs.output_dir }}/.version
+          if-no-files-found: warn
+
+      - name: Post report as PR comment
+        if: ${{ github.event_name == 'pull_request' || inputs.pr_number != '' }}
+        shell: bash
+        env:
+          # Prefer caller-supplied PAT so cross-repo commenting works.
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
+          TARGET_REPO: ${{ steps.target.outputs.repo }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+          OUTPUT_DIR: ${{ inputs.output_dir }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys, urllib.request
+          from pathlib import Path
+
+          report_path = Path("target-repo") / os.environ["OUTPUT_DIR"] / "report.md"
+          if not report_path.exists():
+              print("report.md not found; skipping PR comment.", file=sys.stderr)
+              sys.exit(0)
+
+          body = report_path.read_text(encoding="utf-8")
+          # GitHub PR comment cap is 65535 chars; truncate with artifact link.
+          if len(body) > 60000:
+              body = body[:60000] + (
+                  "\n\n---\n"
+                  f"*Report truncated. "
+                  f"[View full report in workflow artifacts]({os.environ['RUN_URL']}).*"
+              )
+
+          payload = json.dumps({"body": body}).encode()
+          api_url = (
+              f"https://api.github.com/repos/{os.environ['TARGET_REPO']}"
+              f"/issues/{os.environ['PR_NUMBER']}/comments"
+          )
+          req = urllib.request.Request(
+              api_url,
+              data=payload,
+              headers={
+                  "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+              method="POST",
+          )
+          with urllib.request.urlopen(req) as resp:
+              data = json.loads(resp.read())
+          print(f"Comment posted: {data['html_url']}")
+          PY

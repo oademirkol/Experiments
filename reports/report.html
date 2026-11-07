@@ -21,8 +21,8 @@
 </head>
 <body>
   <h1>Regression Analysis Report</h1>
-  <table><tr><th>Report Version</th><td>2026.11.07.005</td></tr>
-<tr><th>Generated at</th><td>2026-11-07 06:59:57 UTC</td></tr>
+  <table><tr><th>Report Version</th><td>2026.11.07.006</td></tr>
+<tr><th>Generated at</th><td>2026-11-07 07:05:20 UTC</td></tr>
 <tr><th>Release</th><td>v1.0</td></tr>
 <tr><th>Reference Baselines</th><td>prefix_261021_125411</td></tr>
 <tr><th>Patch IDs</th><td>PATCH-001</td></tr>
@@ -83,25 +83,26 @@ Edge cases such as account lockout and concurrent sessions are missing.</pre></t
 
 <h3>Input: <code>LoginExact</code></h3>
 
-<p><strong>Specificity Score:</strong> 1</p>
+<p><strong>Specificity Score:</strong> 10</p>
 <table><tr><th>Scenario Name</th><td>LoginExact</td></tr>
 <tr><th>Configuration Name</th><td>default</td></tr>
 <tr><th>Machine Type</th><td>x86_77</td></tr>
 <tr><th>Test Case Name</th><td>test_login_success</td></tr>
 </table>
 <table class="entry-table"><tr><th>Function Cluster / Component</th><td>FC-001 / AuthService</td></tr>
-<tr><th>Scenario Name (pattern)</th><td>Login*</td></tr>
-<tr><th>Configuration Name (pattern)</th><td>—</td></tr>
-<tr><th>Machine Type (pattern)</th><td>—</td></tr>
-<tr><th>Test Case Name (pattern)</th><td>—</td></tr>
+<tr><th>Scenario Name (pattern)</th><td>LoginExact</td></tr>
+<tr><th>Configuration Name (pattern)</th><td>default</td></tr>
+<tr><th>Machine Type (pattern)</th><td>x8*</td></tr>
+<tr><th>Test Case Name (pattern)</th><td>test_login_success</td></tr>
 <tr><th>Release</th><td>v1.0</td></tr>
 <tr><th>Baselines</th><td>prefix_261021_125411</td></tr>
-<tr><th>Patch IDs</th><td>—</td></tr>
-<tr><th>Tags</th><td>—</td></tr>
-<tr><th>Gap Specification</th><td><pre>All Login variant scenarios lack negative path coverage.
-Edge cases such as account lockout and concurrent sessions are missing.</pre></td></tr>
-<tr><th>Mitigations</th><td><pre>—</pre></td></tr>
-<tr><th>Remarks</th><td><pre>—</pre></td></tr>
+<tr><th>Patch IDs</th><td>PATCH-001, PATCH-002</td></tr>
+<tr><th>Tags</th><td>auth, login, smoke, jwt</td></tr>
+<tr><th>Gap Specification</th><td><pre>Login success path is not exercised in the current baseline suite.
+Missing assertion on JWT token expiry handling.</pre></td></tr>
+<tr><th>Mitigations</th><td><pre>Covered by AuthService integration tests in CI pipeline.
+Manual verification performed on v1.0 RC2.</pre></td></tr>
+<tr><th>Remarks</th><td><pre>Tracked in JIRA 12345.</pre></td></tr>
 <tr><th>Source File</th><td>C:\Users\oadem\Documents\projects\experiment\Experiments\gap_analysis\_repo_cache\Experiments\TestFailureGapSpec\FC-001.yaml</td></tr>
 </table>
 
