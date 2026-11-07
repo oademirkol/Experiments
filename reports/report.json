@@ -1,0 +1,131 @@
+{
+  "version": "2026.11.07.005",
+  "generated_at": "2026-11-07 06:59:57 UTC",
+  "run_context": {
+    "release": "v1.0",
+    "reference_baselines": [
+      "prefix_261021_125411"
+    ],
+    "patch_ids": [
+      "PATCH-001"
+    ],
+    "version": "2026.11.07.005"
+  },
+  "matched": [
+    {
+      "input": {
+        "scenario_name": "LoginExact",
+        "configuration_name": "default",
+        "machine_type": "x86_64",
+        "test_case_name": "test_login_success"
+      },
+      "matched_entries": [
+        {
+          "function_cluster": "FC-001",
+          "component": "AuthService",
+          "scenario_name": "LoginExact",
+          "configuration_name": "default",
+          "machine_type": "x86_64",
+          "test_case_name": "test_login_success",
+          "gap_specification": "Login success path is not exercised in the current baseline suite.\nMissing assertion on JWT token expiry handling.",
+          "mitigations": "Covered by AuthService integration tests in CI pipeline.\nManual verification performed on v1.0 RC2.",
+          "tags": [
+            "auth",
+            "login",
+            "smoke",
+            "jwt"
+          ],
+          "baselines": [
+            "prefix_261021_125411"
+          ],
+          "release": "v1.0",
+          "patch_ids": [
+            "PATCH-001"
+          ],
+          "remarks": "Tracked in JIRA AUTH-42.",
+          "output_dir": null,
+          "source_file": "C:\\Users\\oadem\\Documents\\projects\\experiment\\Experiments\\gap_analysis\\_repo_cache\\Experiments\\TestFailureGapSpec\\FC-001.yaml"
+        }
+      ],
+      "specificity_score": 12,
+      "is_ambiguous": false
+    },
+    {
+      "input": {
+        "scenario_name": "LoginWildcardMatch",
+        "configuration_name": null,
+        "machine_type": null,
+        "test_case_name": null
+      },
+      "matched_entries": [
+        {
+          "function_cluster": "FC-001",
+          "component": "AuthService",
+          "scenario_name": "Login*",
+          "configuration_name": null,
+          "machine_type": null,
+          "test_case_name": null,
+          "gap_specification": "All Login variant scenarios lack negative path coverage.\nEdge cases such as account lockout and concurrent sessions are missing.",
+          "mitigations": null,
+          "tags": [],
+          "baselines": [
+            "prefix_261021_125411"
+          ],
+          "release": "v1.0",
+          "patch_ids": [],
+          "remarks": null,
+          "output_dir": null,
+          "source_file": "C:\\Users\\oadem\\Documents\\projects\\experiment\\Experiments\\gap_analysis\\_repo_cache\\Experiments\\TestFailureGapSpec\\FC-001.yaml"
+        }
+      ],
+      "specificity_score": 1,
+      "is_ambiguous": false
+    },
+    {
+      "input": {
+        "scenario_name": "LoginExact",
+        "configuration_name": "default",
+        "machine_type": "x86_77",
+        "test_case_name": "test_login_success"
+      },
+      "matched_entries": [
+        {
+          "function_cluster": "FC-001",
+          "component": "AuthService",
+          "scenario_name": "Login*",
+          "configuration_name": null,
+          "machine_type": null,
+          "test_case_name": null,
+          "gap_specification": "All Login variant scenarios lack negative path coverage.\nEdge cases such as account lockout and concurrent sessions are missing.",
+          "mitigations": null,
+          "tags": [],
+          "baselines": [
+            "prefix_261021_125411"
+          ],
+          "release": "v1.0",
+          "patch_ids": [],
+          "remarks": null,
+          "output_dir": null,
+          "source_file": "C:\\Users\\oadem\\Documents\\projects\\experiment\\Experiments\\gap_analysis\\_repo_cache\\Experiments\\TestFailureGapSpec\\FC-001.yaml"
+        }
+      ],
+      "specificity_score": 1,
+      "is_ambiguous": false
+    }
+  ],
+  "unmatched": [
+    {
+      "scenario_name": "NoMatchScenario",
+      "configuration_name": null,
+      "machine_type": null,
+      "test_case_name": null
+    },
+    {
+      "scenario_name": "NoMatchScenario3",
+      "configuration_name": "asdsa",
+      "machine_type": "asdasd",
+      "test_case_name": "dddd"
+    }
+  ],
+  "syntax_errors": []
+}

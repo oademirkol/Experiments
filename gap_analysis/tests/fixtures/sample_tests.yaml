@@ -12,3 +12,13 @@
   configuration_name: null
   machine_type: null
   test_case_name: null
+
+- scenario_name: NoMatchScenario3
+  configuration_name: asdsa
+  machine_type: asdasd
+  test_case_name: dddd
+
+- scenario_name: "LoginExact"
+  configuration_name: "default"
+  machine_type: "x86_77"
+  test_case_name: "test_login_success"  

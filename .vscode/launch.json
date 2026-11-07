@@ -71,9 +71,6 @@
                 "--output", "${workspaceFolder}/reports"
             ],
             "cwd": "${workspaceFolder}/gap_analysis",
-            "env": {
-                "GH_PAT": "LOCAL"
-            },
             "console": "integratedTerminal",
             "justMyCode": false,
             "stopOnEntry": false

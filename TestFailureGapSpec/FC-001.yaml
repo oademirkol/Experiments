@@ -24,6 +24,24 @@ failing_test_gap_identification:
           remarks: |
             Tracked in JIRA AUTH-42.
 
+        - scenario_name: "LoginExact"
+          configuration_name: "default"
+          machine_type: "x8*"
+          test_case_name: "test_login_success"
+          gap_specification: |
+            Login success path is not exercised in the current baseline suite.
+            Missing assertion on JWT token expiry handling.
+          mitigations: |
+            Covered by AuthService integration tests in CI pipeline.
+            Manual verification performed on v1.0 RC2.
+          tags: [auth, login, smoke, jwt]
+          baselines:
+            - "prefix_261021_125411"
+          release: "v1.0"
+          patch_ids: ["PATCH-001", "PATCH-002"]
+          remarks: |
+            Tracked in JIRA 12345.            
+
         # partial wildcard scenario; baseline only
         - scenario_name: "Login*"
           gap_specification: |

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Regression Analysis Report</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; color: #222; }
+    h1 { border-bottom: 2px solid #444; }
+    h2 { border-bottom: 1px solid #aaa; margin-top: 2em; }
+    h3 { margin-top: 1.5em; border-top: 1px solid #ddd; padding-top: 0.5em; }
+    table { border-collapse: collapse; margin-bottom: 1em; min-width: 400px; }
+    th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-align: top; }
+    th { background: #f5f5f5; white-space: nowrap; }
+    pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+    .warn { color: #a05000; border-left: 3px solid orange; padding: 4px 8px; }
+    .entry-table { margin-left: 1.5em; }
+    .unmatched td, .unmatched th { background: #fff8f0; }
+    .syntax-errors td, .syntax-errors th { background: #fff0f0; }
+  </style>
+</head>
+<body>
+  <h1>Regression Analysis Report</h1>
+  <table><tr><th>Report Version</th><td>2026.11.07.005</td></tr>
+<tr><th>Generated at</th><td>2026-11-07 06:59:57 UTC</td></tr>
+<tr><th>Release</th><td>v1.0</td></tr>
+<tr><th>Reference Baselines</th><td>prefix_261021_125411</td></tr>
+<tr><th>Patch IDs</th><td>PATCH-001</td></tr>
+<tr><th>Matched</th><td>3</td></tr>
+<tr><th>Unmatched</th><td>2</td></tr>
+<tr><th>Syntax Errors</th><td>0</td></tr>
+</table>
+
+  <h2>Matched Entries</h2>
+  <h3>Input: <code>LoginExact</code></h3>
+
+<p><strong>Specificity Score:</strong> 12</p>
+<table><tr><th>Scenario Name</th><td>LoginExact</td></tr>
+<tr><th>Configuration Name</th><td>default</td></tr>
+<tr><th>Machine Type</th><td>x86_64</td></tr>
+<tr><th>Test Case Name</th><td>test_login_success</td></tr>
+</table>
+<table class="entry-table"><tr><th>Function Cluster / Component</th><td>FC-001 / AuthService</td></tr>
+<tr><th>Scenario Name (pattern)</th><td>LoginExact</td></tr>
+<tr><th>Configuration Name (pattern)</th><td>default</td></tr>
+<tr><th>Machine Type (pattern)</th><td>x86_64</td></tr>
+<tr><th>Test Case Name (pattern)</th><td>test_login_success</td></tr>
+<tr><th>Release</th><td>v1.0</td></tr>
+<tr><th>Baselines</th><td>prefix_261021_125411</td></tr>
+<tr><th>Patch IDs</th><td>PATCH-001</td></tr>
+<tr><th>Tags</th><td>auth, login, smoke, jwt</td></tr>
+<tr><th>Gap Specification</th><td><pre>Login success path is not exercised in the current baseline suite.
+Missing assertion on JWT token expiry handling.</pre></td></tr>
+<tr><th>Mitigations</th><td><pre>Covered by AuthService integration tests in CI pipeline.
+Manual verification performed on v1.0 RC2.</pre></td></tr>
+<tr><th>Remarks</th><td><pre>Tracked in JIRA AUTH-42.</pre></td></tr>
+<tr><th>Source File</th><td>C:\Users\oadem\Documents\projects\experiment\Experiments\gap_analysis\_repo_cache\Experiments\TestFailureGapSpec\FC-001.yaml</td></tr>
+</table>
+
+<h3>Input: <code>LoginWildcardMatch</code></h3>
+
+<p><strong>Specificity Score:</strong> 1</p>
+<table><tr><th>Scenario Name</th><td>LoginWildcardMatch</td></tr>
+<tr><th>Configuration Name</th><td>—</td></tr>
+<tr><th>Machine Type</th><td>—</td></tr>
+<tr><th>Test Case Name</th><td>—</td></tr>
+</table>
+<table class="entry-table"><tr><th>Function Cluster / Component</th><td>FC-001 / AuthService</td></tr>
+<tr><th>Scenario Name (pattern)</th><td>Login*</td></tr>
+<tr><th>Configuration Name (pattern)</th><td>—</td></tr>
+<tr><th>Machine Type (pattern)</th><td>—</td></tr>
+<tr><th>Test Case Name (pattern)</th><td>—</td></tr>
+<tr><th>Release</th><td>v1.0</td></tr>
+<tr><th>Baselines</th><td>prefix_261021_125411</td></tr>
+<tr><th>Patch IDs</th><td>—</td></tr>
+<tr><th>Tags</th><td>—</td></tr>
+<tr><th>Gap Specification</th><td><pre>All Login variant scenarios lack negative path coverage.
+Edge cases such as account lockout and concurrent sessions are missing.</pre></td></tr>
+<tr><th>Mitigations</th><td><pre>—</pre></td></tr>
+<tr><th>Remarks</th><td><pre>—</pre></td></tr>
+<tr><th>Source File</th><td>C:\Users\oadem\Documents\projects\experiment\Experiments\gap_analysis\_repo_cache\Experiments\TestFailureGapSpec\FC-001.yaml</td></tr>
+</table>
+
+<h3>Input: <code>LoginExact</code></h3>
+
+<p><strong>Specificity Score:</strong> 1</p>
+<table><tr><th>Scenario Name</th><td>LoginExact</td></tr>
+<tr><th>Configuration Name</th><td>default</td></tr>
+<tr><th>Machine Type</th><td>x86_77</td></tr>
+<tr><th>Test Case Name</th><td>test_login_success</td></tr>
+</table>
+<table class="entry-table"><tr><th>Function Cluster / Component</th><td>FC-001 / AuthService</td></tr>
+<tr><th>Scenario Name (pattern)</th><td>Login*</td></tr>
+<tr><th>Configuration Name (pattern)</th><td>—</td></tr>
+<tr><th>Machine Type (pattern)</th><td>—</td></tr>
+<tr><th>Test Case Name (pattern)</th><td>—</td></tr>
+<tr><th>Release</th><td>v1.0</td></tr>
+<tr><th>Baselines</th><td>prefix_261021_125411</td></tr>
+<tr><th>Patch IDs</th><td>—</td></tr>
+<tr><th>Tags</th><td>—</td></tr>
+<tr><th>Gap Specification</th><td><pre>All Login variant scenarios lack negative path coverage.
+Edge cases such as account lockout and concurrent sessions are missing.</pre></td></tr>
+<tr><th>Mitigations</th><td><pre>—</pre></td></tr>
+<tr><th>Remarks</th><td><pre>—</pre></td></tr>
+<tr><th>Source File</th><td>C:\Users\oadem\Documents\projects\experiment\Experiments\gap_analysis\_repo_cache\Experiments\TestFailureGapSpec\FC-001.yaml</td></tr>
+</table>
+
+
+  <h2>Unmatched Inputs</h2>
+  <table class="unmatched"><thead><tr><th>Scenario Name</th><th>Configuration Name</th><th>Machine Type</th><th>Test Case Name</th></tr></thead><tbody><tr><td>NoMatchScenario</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>NoMatchScenario3</td><td>asdsa</td><td>asdasd</td><td>dddd</td></tr>
+</tbody></table>
+
+  <h2>Syntax Errors in Gap Specifications</h2>
+  <p>No syntax errors detected.</p>
+</body>
+</html>
