@@ -1,0 +1,67 @@
+function_cluster: FC-001
+failing_test_gap_identification:
+  components:
+
+    - name: AuthService
+      test_entries:
+
+        # all 4 fields exact; has both baseline and patch
+        - scenario_name: "LoginExact"
+          configuration_name: "default"
+          machine_type: "x86_64"
+          test_case_name: "test_login_success"
+          gap_specification: |
+            Login success path is not exercised in the current baseline suite.
+            Missing assertion on JWT token expiry handling.
+          mitigations: |
+            Covered by AuthService integration tests in CI pipeline.
+            Manual verification performed on v1.0 RC2.
+          tags: [auth, login, smoke, jwt]
+          baselines:
+            - "prefix_261021_125411"
+          release: "v1.0"
+          patch_ids: ["PATCH-001"]
+          remarks: |
+            Tracked in JIRA AUTH-42.
+
+        # partial wildcard scenario; baseline only
+        - scenario_name: "Login*"
+          gap_specification: |
+            All Login variant scenarios lack negative path coverage.
+            Edge cases such as account lockout and concurrent sessions are missing.
+          release: "v1.0"
+          baselines:
+            - "prefix_261021_125411"
+
+        # double wildcard; baseline range
+        - scenario_name: "*Session*"
+          gap_specification: |
+            Session management scenarios have no coverage within the specified baseline range.
+          release: "v1.0"
+          baselines:
+            - "range:prefix_261021_125411 - prefix_261101_101145"
+
+        # all 4 fields exact; patch-only (no baselines)
+        - scenario_name: "LogoutExact"
+          configuration_name: "prod"
+          machine_type: "arm64"
+          test_case_name: "test_logout"
+          gap_specification: |
+            Logout flow not covered under patch PATCH-002 changes.
+            Token invalidation step missing from test suite.
+          release: "v1.0"
+          patch_ids: ["PATCH-002"]
+
+    - name: PasswordService
+      test_entries:
+
+        # partial wildcard; baseline range; mitigations populated
+        - scenario_name: "PasswordReset*"
+          gap_specification: |
+            Password reset flow is not covered in any baseline within the specified range.
+            Missing tests for reset-link expiry and re-use prevention.
+          mitigations: |
+            Risk accepted by security team in ADR-017.
+          release: "v1.0"
+          baselines:
+            - "range:prefix_261021_125411 - prefix_261101_101145"

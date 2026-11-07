@@ -1,0 +1,56 @@
+function_cluster: FC-004
+failing_test_gap_identification:
+  components:
+
+    - name: SMSGateway
+      test_entries:
+
+        # all 4 fields exact; baseline + patch; tags + mitigations + remarks
+        - scenario_name: "SMS_Send"
+          configuration_name: "prod"
+          machine_type: "x86_64"
+          test_case_name: "test_sms_delivery"
+          gap_specification: |
+            SMS delivery confirmation is not asserted in the test suite.
+            Carrier-specific encoding differences are not covered.
+          mitigations: |
+            Partial coverage exists in manual smoke tests.
+            Monitoring alerts provide runtime gap coverage.
+          tags: [sms, notification, delivery]
+          baselines:
+            - "prefix_261021_125411"
+          release: "v1.0"
+          patch_ids: ["PATCH-001"]
+          remarks: |
+            International number format handling deferred to v1.2.
+
+        # partial wildcard scenario; multiple patch IDs; no baselines
+        - scenario_name: "SMS_*"
+          gap_specification: |
+            All SMS_ scenarios are missing failure and retry path coverage.
+            DLQ (dead-letter queue) behaviour is completely untested.
+          release: "v1.0"
+          patch_ids: ["PATCH-001", "PATCH-002"]
+
+    - name: EmailService
+      test_entries:
+
+        # partial wildcard scenario; baseline range; tags
+        - scenario_name: "Email_*"
+          gap_specification: |
+            Email dispatch scenarios have no coverage within the specified baseline range.
+            Attachment handling and MIME type validation are absent.
+          tags: [email, notification, mime]
+          release: "v1.0"
+          baselines:
+            - "range:prefix_261021_125411 - prefix_261101_101145"
+
+        # partial wildcard; patch-only; mitigations
+        - scenario_name: "Push_Notification*"
+          gap_specification: |
+            Push notification delivery acknowledgement is not tested.
+            Silent push and background refresh modes have no coverage.
+          mitigations: |
+            Firebase console monitoring partially compensates for missing assertions.
+          release: "v1.0"
+          patch_ids: ["PATCH-002"]

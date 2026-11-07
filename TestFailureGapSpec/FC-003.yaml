@@ -1,0 +1,50 @@
+function_cluster: FC-003
+failing_test_gap_identification:
+  components:
+
+    - name: GatewayCore
+      test_entries:
+
+        # all 4 fields exact; v1.0; baseline + patch — max specificity score = 12
+        - scenario_name: "API_RateLimit"
+          configuration_name: "staging"
+          machine_type: "x86_64"
+          test_case_name: "test_rate_limit"
+          gap_specification: |
+            API rate-limiting enforcement is not exercised at the gateway level.
+            Burst-allowance edge cases are completely absent from the test suite.
+          tags: [api, ratelimit, gateway]
+          baselines:
+            - "prefix_261021_125411"
+          release: "v1.0"
+          patch_ids: ["PATCH-001"]
+
+        # partial wildcard scenario + exact machine_type — score = 4 when machine matches
+        - scenario_name: "API_*"
+          machine_type: "x86_64"
+          gap_specification: |
+            All API_ prefixed scenarios lack coverage on x86_64 machines.
+            Connection pooling and keep-alive behaviours are not tested.
+          release: "v1.0"
+          patch_ids: ["PATCH-002"]
+
+        # suffix wildcard; baseline range
+        - scenario_name: "*_Timeout"
+          gap_specification: |
+            Timeout scenarios across all integrations are missing end-to-end coverage.
+            Downstream service degradation paths have no automated assertions.
+          release: "v1.0"
+          baselines:
+            - "range:prefix_261021_125411 - prefix_261101_101145"
+
+    - name: HealthMonitor
+      test_entries:
+
+        # v2.0 entry — must NOT match v1.0 queries (exercises release filter)
+        - scenario_name: "Gateway_Health"
+          gap_specification: |
+            Gateway health endpoint behaviour changed in v2.0 but has no regression coverage.
+            New /readyz endpoint is completely untested.
+          release: "v2.0"
+          baselines:
+            - "prefix_261101_101145"

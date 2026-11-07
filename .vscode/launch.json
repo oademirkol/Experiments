@@ -1,0 +1,82 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Unit Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "unittest",
+            "args": ["discover", "tests/", "-v"],
+            "cwd": "${workspaceFolder}/gap_analysis",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Integration Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "unittest",
+            "args": ["tests/test_integration.py", "-v"],
+            "cwd": "${workspaceFolder}/gap_analysis",
+            "env": {
+                "GH_PAT": "LOCAL"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "All Tests (Unit + Integration)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "unittest",
+            "args": ["discover", "tests/", "-v"],
+            "cwd": "${workspaceFolder}/gap_analysis",
+            "env": {
+                "GH_PAT": "LOCAL"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Run Tool (sample data, LOCAL)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gap_analysis",
+            "args": [
+                "--config", "config.yaml",
+                "--release", "v1.0",
+                "--baseline", "prefix_261021_125411",
+                "--patch", "PATCH-001",
+                "--tests", "tests/fixtures/sample_tests.yaml",
+                "--output", "${workspaceFolder}/reports"
+            ],
+            "cwd": "${workspaceFolder}/gap_analysis",
+            "env": {
+                "GH_PAT": "LOCAL"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Debug Tool (step through)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gap_analysis",
+            "args": [
+                "--config", "config.yaml",
+                "--release", "v1.0",
+                "--baseline", "prefix_261021_125411",
+                "--patch", "PATCH-001",
+                "--tests", "tests/fixtures/sample_tests.yaml",
+                "--output", "${workspaceFolder}/reports"
+            ],
+            "cwd": "${workspaceFolder}/gap_analysis",
+            "env": {
+                "GH_PAT": "LOCAL"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": false
+        }
+    ]
+}

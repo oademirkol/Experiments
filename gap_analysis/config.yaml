@@ -1,0 +1,12 @@
+github:
+  owner: oademirkol
+  repo: Experiments
+  branch: main
+  gap_spec_dir: TestFailureGapSpec
+
+# Used only when GH_PAT=LOCAL (offline / CI fixture mode)
+# Relative to the gap_analysis/ working directory: .. resolves to the repo root
+local_path: ..
+
+output:
+  base_dir: ./reports
